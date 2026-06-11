@@ -11,6 +11,7 @@
     "deploy": "npm run build && gh-pages -d dist"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "fast-average-color": "^9.5.2",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
