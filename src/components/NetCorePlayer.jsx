@@ -84,7 +84,6 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
 
   const imdbId = item['#IMDB_ID'];
   const isTV = item.media_type === 'tv';
-  const API_KEY = '091a808df1c6478aea7af42d9a550242';
 
   // Persistence and URL Sync
   useEffect(() => {
@@ -129,26 +128,26 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
       setLoading(true);
       try {
         const type = isTV ? 'tv' : 'movie';
-        const res = await fetch(`https://api.themoviedb.org/3/${type}/${item.tmdb_id}?api_key=${API_KEY}&append_to_response=credits,recommendations`);
-        let data = await res.json();
-
+        const data = await apiCache.fetchCached(`https://api.themoviedb.org/3/${type}/${item.tmdb_id}?append_to_response=credits,recommendations`);
+        
+        let processedData = data;
         if (isTV) {
             // Apply custom mapping if it exists
             if (TV_MAPPINGS[item.tmdb_id]) {
               const mapping = TV_MAPPINGS[item.tmdb_id];
-              data = {
+              processedData = {
                   ...data,
                   seasons: Object.keys(mapping.seasons).map(s => ({ season_number: parseInt(s), episode_count: mapping.seasons[s].episode_count }))
               };
             } else {
               // Filter out season 0
-              data.seasons = (data.seasons || []).filter(s => s.season_number !== 0);
+              processedData.seasons = (data.seasons || []).filter(s => s.season_number !== 0);
             }
         }
 
         // Map recommendations to our app format
-        if (data.recommendations?.results) {
-          const mapped = data.recommendations.results.slice(0, 10).map(rec => ({
+        if (processedData.recommendations?.results) {
+          const mapped = processedData.recommendations.results.slice(0, 10).map(rec => ({
             '#TITLE': rec.title || rec.name,
             '#YEAR': rec.release_date ? rec.release_date.split('-')[0] : (rec.first_air_date ? rec.first_air_date.split('-')[0] : 'N/A'),
             '#IMDB_ID': null, // We fetch this on-demand when clicked
@@ -162,7 +161,7 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
           setRecommendations(mapped);
         }
 
-        setTvDetails(data);
+        setTvDetails(processedData);
       } catch (err) {
         console.error('Failed to fetch details:', err);
       } finally {
@@ -178,8 +177,7 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
     
     const fetchEpisodeDetails = async () => {
       try {
-        const res = await fetch(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/${season}/episode/${episode}?api_key=${API_KEY}`);
-        const data = await res.json();
+        const data = await apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/${season}/episode/${episode}`);
         setEpisodeDetails(data);
       } catch (err) {
         console.error('Failed to fetch episode details:', err);
@@ -241,8 +239,7 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
 
   const handleRecommendationClick = async (rec) => {
     try {
-      const res = await fetch(`https://api.themoviedb.org/3/${rec.media_type}/${rec.tmdb_id}?api_key=${API_KEY}&append_to_response=external_ids,credits,content_ratings,release_dates`)
-      const data = await res.json()
+      const data = await apiCache.fetchCached(`https://api.themoviedb.org/3/${rec.media_type}/${rec.tmdb_id}?append_to_response=external_ids,credits,content_ratings,release_dates`)
       
       let certification = 'N/A'
       if (rec.media_type === 'movie') {

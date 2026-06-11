@@ -55,7 +55,7 @@ function App() {
   const [scrollOpacity, setScrollOpacity] = useState(1)
 
   // ENVIRONMENT VARIABLES
-  const API_KEY = import.meta.env.VITE_TMDB_API_KEY || '091a808df1c6478aea7af42d9a550242'
+  const API_KEY = import.meta.env.VITE_TMDB_API_KEY || ''
   
   useEffect(() => {
     const handleScroll = () => {
@@ -316,7 +316,7 @@ function App() {
       setLoadingPixar(true)
       try {
         // Pixar production company ID is 3
-        const pixarData = await apiCache.fetchCached(`https://api.themoviedb.org/3/discover/movie?api_key=091a808df1c6478aea7af42d9a550242&with_companies=3&sort_by=popularity.desc`);
+        const pixarData = await apiCache.fetchCached(`https://api.themoviedb.org/3/discover/movie?with_companies=3&sort_by=popularity.desc`);
         const movies = pixarData.results || [];
         
         const detailed = await resolveDetailedItems(movies.slice(0, 10).map(m => ({ ...m, media_type: 'movie' })));

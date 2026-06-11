@@ -1,8 +1,8 @@
 /**
- * Utility to send reports to Discord via Webhook
+ * Utility to send reports to Discord via Webhook proxy
  */
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1508625698200490138/gOFnC8ezj7PKqVFaI9oqLZaDQuO57a35Sf2WARWKafajTHZKY-e_JGuUrL5_J9t8LUIg";
+const REPORT_ENDPOINT = "/api/report";
 
 export const sendReport = async (item, issueType, details = "", currentSeason = null, currentEpisode = null, extraData = {}) => {
   const browserInfo = navigator.userAgent;
@@ -55,7 +55,7 @@ export const sendReport = async (item, issueType, details = "", currentSeason = 
   };
 
   try {
-    const response = await fetch(DISCORD_WEBHOOK_URL, {
+    const response = await fetch(REPORT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

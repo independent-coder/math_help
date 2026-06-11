@@ -34,7 +34,6 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
 
   const isTV = item.media_type === 'tv'
   const isWatchlisted = watchlist.some(w => w['#IMDB_ID'] === item['#IMDB_ID'])
-  const API_KEY = import.meta.env.VITE_TMDB_API_KEY || '091a808df1c6478aea7af42d9a550242'
   
   // Update episodeDetails when episode or seasonDetails change
   useEffect(() => {
@@ -122,7 +121,7 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
   // Fetch Full Details (Cast, Videos, Recommendations)
   useEffect(() => {
     if (!item.tmdb_id) return
-    apiCache.fetchCached(`https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?api_key=${API_KEY}&append_to_response=credits,videos,recommendations`)
+    apiCache.fetchCached(`https://api.themoviedb.org/3/${item.media_type}/${item.tmdb_id}?append_to_response=credits,videos,recommendations`)
       .then(d => {
         if (d.credits?.cast) setCast(d.credits.cast.slice(0, 5))
         const trailerVideo = d.videos?.results?.find(v => v.type === 'Trailer' && v.site === 'YouTube') || d.videos?.results?.[0]
@@ -150,10 +149,10 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
   useEffect(() => {
     if (!isTV || !item.tmdb_id) return
     setLoadingTvDetails(true)
-    apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}?api_key=${API_KEY}`)
+    apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}`)
       .then(details => {
         setTvDetails(getMappedTVDetails(details))
-        return apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/1?api_key=${API_KEY}`)
+        return apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/1`)
       })
       .then(season1 => {
         setAllSeason1Data(season1)
@@ -179,14 +178,14 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
       return
     }
 
-    apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/${season}?api_key=${API_KEY}`)
+    apiCache.fetchCached(`https://api.themoviedb.org/3/tv/${item.tmdb_id}/season/${season}`)
       .then(d => { setSeasonDetails(d); setEpisode(1) })
       .catch(e => console.error('Season fetch error:', e))
   }, [season, isTV, item.tmdb_id, allSeason1Data])
 
   const handleRecommendationClick = async (rec) => {
     try {
-      const data = await apiCache.fetchCached(`https://api.themoviedb.org/3/${rec.media_type}/${rec.tmdb_id}?api_key=${API_KEY}&append_to_response=external_ids`)
+      const data = await apiCache.fetchCached(`https://api.themoviedb.org/3/${rec.media_type}/${rec.tmdb_id}?append_to_response=external_ids`)
       
       const fullItem = {
         '#TITLE': data.title || data.name,
