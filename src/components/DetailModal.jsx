@@ -23,6 +23,8 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
   const [reportSent, setReportSent] = useState(false)
   const [reportMessage, setReportMessage] = useState('')
   
+  const [episodeDetails, setEpisodeDetails] = useState(null)
+  
   const seasonRef = useRef(null)
   const episodeRef = useRef(null)
   const recommendationsRef = useRef(null)
@@ -34,6 +36,16 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
   const isWatchlisted = watchlist.some(w => w['#IMDB_ID'] === item['#IMDB_ID'])
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY || '091a808df1c6478aea7af42d9a550242'
   
+  // Update episodeDetails when episode or seasonDetails change
+  useEffect(() => {
+    if (isTV && seasonDetails?.episodes) {
+      const ep = seasonDetails.episodes.find(e => e.episode_number === episode)
+      if (ep) setEpisodeDetails(ep)
+    } else {
+      setEpisodeDetails(null)
+    }
+  }, [episode, seasonDetails, isTV])
+
   const isUnreleased = () => {
     if (!item.status) return false
     const unreleasedStatuses = ['Planned', 'In Production', 'Post Production', 'Rumored']
@@ -326,6 +338,40 @@ function DetailModal({ item, onClose, onPlay, onOpenDetails, watchlist, onToggle
                       )}
                     </div>
                   </div>
+
+                  {/* Episode Info Display */}
+                  {episodeDetails && (
+                    <div className="mt-4 flex flex-col sm:flex-row gap-4 p-4 bg-white/5 border border-white/5 rounded-2xl animate-in fade-in slide-in-from-top-2 duration-300">
+                      {episodeDetails.still_path && (
+                        <div className="flex-shrink-0 w-full sm:w-48 aspect-video rounded-lg overflow-hidden border border-white/10 bg-darker">
+                          <img 
+                            src={`https://image.tmdb.org/t/p/w500${episodeDetails.still_path}`} 
+                            alt={episodeDetails.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <h5 className="text-white font-bold text-sm flex items-center gap-2">
+                          <span className="text-primary">E{episodeDetails.episode_number}</span> 
+                          {episodeDetails.name}
+                        </h5>
+                        <p className="text-gray-400 text-xs leading-relaxed line-clamp-3">
+                          {episodeDetails.overview || "No synopsis available for this episode."}
+                        </p>
+                        <div className="flex items-center gap-3 text-[10px] text-gray-500 font-medium">
+                          {episodeDetails.air_date && <span>Released: {episodeDetails.air_date}</span>}
+                          {episodeDetails.runtime > 0 && <span>• {episodeDetails.runtime}m</span>}
+                          {episodeDetails.vote_average > 0 && (
+                            <span className="flex items-center gap-1 text-yellow-500/80">
+                              <Star size={10} className="fill-yellow-500/80" />
+                              {episodeDetails.vote_average.toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

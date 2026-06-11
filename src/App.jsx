@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+  import { useState, useEffect } from 'react'
 import { Search, Film, Tv, ArrowLeft, Play, Clock, X, TrendingUp, Bookmark, Star, Flame, Rocket, Heart, Sparkles, Apple, Palette, Newspaper } from 'lucide-react'
 import NetCorePlayer from './components/NetCorePlayer'
 import SearchResults from './components/SearchResults'
@@ -15,6 +15,7 @@ import PasswordPrompt from './components/PasswordPrompt'
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isMathMode, setIsMathMode] = useState(false)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -67,6 +68,25 @@ function App() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // Stealth Math Mode toggle on double click
+  useEffect(() => {
+    const handleDblClick = (e) => {
+      // Toggle if clicking the main background elements
+      const isBackground = ['DIV', 'MAIN', 'HTML', 'BODY', 'SECTION'].includes(e.target.tagName)
+      // Also check if we are clicking a container and not a button/link/img
+      const isInteractive = e.target.closest('button, a, img, input, iframe')
+      
+      if (isBackground && !isInteractive) {
+        setIsMathMode(prev => !prev)
+        // Update document title for stealth
+        document.title = !isMathMode ? 'Calculus Help & Algebra Solvers' : 'Math Help - Calculus & Algebra Resources'
+      }
+    }
+
+    window.addEventListener('dblclick', handleDblClick)
+    return () => window.removeEventListener('dblclick', handleDblClick)
+  }, [isMathMode])
   
   // Autocomplete suggestions states
   const [suggestions, setSuggestions] = useState([])
@@ -367,6 +387,7 @@ function App() {
     const type = params.get('type')
     const s = params.get('s')
     const e = params.get('e')
+    const playerParam = params.get('player')
 
     if (id && type) {
       const loadDeepLink = async () => {
@@ -379,7 +400,10 @@ function App() {
             })
           }
           setSelectedItem(resolved)
-          setShowPlayer(true)
+          // Open player if 'player=true' or if no specific player param is present (defaulting to play)
+          if (playerParam === 'true' || playerParam === null) {
+            setShowPlayer(true)
+          }
           addToRecentlyWatched(resolved)
         }
       }
@@ -391,14 +415,35 @@ function App() {
   useEffect(() => {
     if (!isAuthenticated) return
     const params = new URLSearchParams(window.location.search)
+    
     if (showPlayer && selectedItem) {
-      if (params.get('id') !== String(selectedItem.tmdb_id) || params.get('type') !== selectedItem.media_type) {
+      let changed = false
+      if (params.get('player') !== 'true') {
+        params.set('player', 'true')
+        changed = true
+      }
+      if (params.get('id') !== String(selectedItem.tmdb_id)) {
         params.set('id', selectedItem.tmdb_id)
+        changed = true
+      }
+      if (params.get('type') !== selectedItem.media_type) {
         params.set('type', selectedItem.media_type)
+        changed = true
+      }
+      
+      if (changed) {
         window.history.pushState({}, '', `${window.location.pathname}?${params.toString()}`)
       }
-    } else if (!showPlayer && params.has('id')) {
-      window.history.pushState({}, '', window.location.pathname)
+    } else if (!showPlayer && params.has('player')) {
+      // Clear all player-related params when closing player
+      params.delete('player')
+      params.delete('id')
+      params.delete('type')
+      params.delete('s')
+      params.delete('e')
+      params.delete('p')
+      const newSearch = params.toString()
+      window.history.pushState({}, '', newSearch ? `${window.location.pathname}?${newSearch}` : window.location.pathname)
     }
   }, [showPlayer, selectedItem, isAuthenticated])
 
@@ -652,8 +697,72 @@ function App() {
   return (
     <>
       {!isAuthenticated && <PasswordPrompt onAuthenticated={() => setIsAuthenticated(true)} />}
-      <div className={`min-h-screen bg-gradient-to-br from-darker via-dark to-darker ${!isAuthenticated ? 'hidden' : ''}`}>
-        {/* Header */}
+      
+      {isMathMode ? (
+        <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-8 md:p-24 animate-in fade-in duration-500">
+          <div className="max-w-4xl mx-auto space-y-12">
+            <header className="border-b border-slate-200 pb-8">
+              <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+                Secondary 2 Mathematics: Core Curriculum
+              </h1>
+              <p className="mt-4 text-xl text-slate-600">
+                Practice problems, interactive tutorials, and study guides for the Sec 2 math syllabus.
+              </p>
+            </header>
+
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600">
+                  <Palette size={24} />
+                </div>
+                <h3 className="text-xl font-bold">Algebraic Expressions</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Master expanding and factoring linear expressions. Solving multi-step equations and understanding variables in context.
+                </p>
+                <div className="pt-2">
+                  <span className="text-blue-600 font-semibold text-sm hover:underline cursor-pointer">Start Practice Quiz →</span>
+                </div>
+              </div>
+
+              <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                  <Rocket size={24} />
+                </div>
+                <h3 className="text-xl font-bold">Geometry & Measurement</h3>
+                <p className="text-slate-600 leading-relaxed">
+                  Calculating surface area and volume of prisms and cylinders. Introduction to the Pythagorean theorem and its applications.
+                </p>
+                <div className="pt-2">
+                  <span className="text-emerald-600 font-semibold text-sm hover:underline cursor-pointer">View Formulas →</span>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="text-2xl font-bold">Weekly Homework Help</h2>
+              <div className="space-y-4">
+                {[
+                  { title: "Linear Equations: Solving for 'x' with Parentheses", date: "Due in 2 days" },
+                  { title: "Calculating Ratios and Proportions in Real Life", date: "Completed" },
+                  { title: "Properties of Parallelograms and Trapezoids", date: "New Material" }
+                ].map((post, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 bg-slate-100 rounded-xl border border-slate-200 hover:bg-slate-200 transition-colors cursor-pointer">
+                    <span className="font-medium text-slate-800">{post.title}</span>
+                    <span className="text-sm text-slate-500 font-mono">{post.date}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <footer className="pt-12 text-slate-400 text-sm border-t border-slate-100">
+              <p>© 2026 Secondary School Math Portal. All rights reserved.</p>
+              <p className="mt-2 italic">Building a strong foundation for future mathematical success.</p>
+            </footer>
+          </div>
+        </div>
+      ) : (
+        <div className={`min-h-screen bg-gradient-to-br from-darker via-dark to-darker ${!isAuthenticated ? 'hidden' : ''}`}>
+          {/* Header */}
       <header className="border-b border-white/10 backdrop-blur-sm bg-darker/50 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
@@ -968,6 +1077,7 @@ function App() {
         <p>DMCA: This site does not host any files on its servers. All content is provided by non-affiliated third parties. We do not store or distribute any files.</p>
       </footer>
     </div>
+    )}
     </>
   )
 }

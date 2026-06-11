@@ -4,28 +4,10 @@ import { md5 } from '../utils/md5.js'
 // hash 6285 authed = b7ae8fecf15b8b6c3c69eceae636d203
 // hash 6286 new hash = caa145542f7333f6ebf99a72b87bdeba
 const STORED_HASH = '57827ddd068a17ad6dfc6690962241e5'
-// Increment this version to force all users to log out and re-enter the password
-const AUTH_VERSION = '1.0.2'
-
 export default function PasswordPrompt({ onAuthenticated }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(false)
   const [isLocked, setIsLocked] = useState(true)
-
-  useEffect(() => {
-    // Check if already authenticated in this session and version matches
-    const auth = sessionStorage.getItem('site_auth')
-    const savedVersion = sessionStorage.getItem('site_auth_version')
-
-    if (auth === 'true' && savedVersion === AUTH_VERSION) {
-      onAuthenticated()
-      setIsLocked(false)
-    } else if (auth === 'true' && savedVersion !== AUTH_VERSION) {
-      // Force logout if version changed
-      sessionStorage.removeItem('site_auth')
-      sessionStorage.removeItem('site_auth_version')
-    }
-  }, [onAuthenticated])
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -34,8 +16,6 @@ export default function PasswordPrompt({ onAuthenticated }) {
     const enteredHash = md5(password)
 
     if (enteredHash === STORED_HASH) {
-      sessionStorage.setItem('site_auth', 'true')
-      sessionStorage.setItem('site_auth_version', AUTH_VERSION)
       onAuthenticated()
       setIsLocked(false)
     } else {

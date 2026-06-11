@@ -14,7 +14,12 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
   const [showSeasons, setShowSeasons] = useState(false);
   const [showEpisodes, setShowEpisodes] = useState(false);
   const [showProviders, setShowProviders] = useState(false);
-  const [provider, setProvider] = useState('vidlink'); 
+  const [provider, setProvider] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get('p');
+    const validProviders = ['vidlink', 'vidapi', 'vidcore', 'vidsrc', 'multiembed', 'videasy', 'cinezo'];
+    return validProviders.includes(p) ? p : 'vidapi';
+  }); 
   const [tvDetails, setTvDetails] = useState(null);
   const [episodeDetails, setEpisodeDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -97,15 +102,26 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
     localStorage.setItem(`progress_${imdbId}`, JSON.stringify({ season, episode }));
     
     // Sync with URL for deep-linking
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
     if (isTV) {
-      const params = new URLSearchParams(window.location.search);
       if (params.get('s') !== String(season) || params.get('e') !== String(episode)) {
         params.set('s', season);
         params.set('e', episode);
-        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+        changed = true;
       }
     }
-  }, [season, episode, imdbId, isTV]);
+
+    if (params.get('p') !== provider) {
+      params.set('p', provider);
+      changed = true;
+    }
+
+    if (changed) {
+      window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    }
+  }, [season, episode, imdbId, isTV, provider]);
 
   // Fetch show/movie details
   useEffect(() => {
@@ -185,6 +201,12 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
   }, []);
 
   const getEmbedUrl = () => {
+    if (provider === 'vidapi') {
+        const id = item['#IMDB_ID'] || item.tmdb_id;
+        return isTV 
+            ? `https://vaplayer.ru/embed/tv/${id}/${season}/${episode}?autoplay=1` 
+            : `https://vaplayer.ru/embed/movie/${id}?autoplay=1`;
+    }
     if (provider === 'vidlink') {
         return `https://vidlink.pro/${isTV ? `tv/${item.tmdb_id}/${season}/${episode}` : `movie/${item.tmdb_id}`}?autoplay=true`;
     }
@@ -280,6 +302,37 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
         <div className="md:col-span-2 space-y-4">
           <h1 className="text-3xl font-bold text-white">{item['#TITLE']}</h1>
           <div className="bg-white/5 border border-white/5 rounded-2xl p-6 space-y-4 text-sm text-gray-300">
+              {isTV && episodeDetails && (
+                <div className="flex flex-col sm:flex-row gap-6 mb-6 pb-6 border-b border-white/10 animate-in fade-in slide-in-from-top-4 duration-500">
+                   {episodeDetails.still_path && (
+                    <div className="flex-shrink-0 w-full sm:w-64 aspect-video rounded-xl overflow-hidden border border-white/10 shadow-lg bg-darker">
+                      <img 
+                        src={`https://image.tmdb.org/t/p/w500${episodeDetails.still_path}`} 
+                        alt={episodeDetails.name} 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                        <span className="text-primary">E{episode}</span> {episodeDetails.name}
+                      </h3>
+                      {episodeDetails.air_date && <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-1 rounded-lg">Aired: {episodeDetails.air_date}</span>}
+                    </div>
+                    <p className="text-gray-200 text-sm leading-relaxed italic">"{episodeDetails.overview || "No synopsis available for this episode."}"</p>
+                    <div className="flex items-center gap-4 text-xs font-semibold">
+                       {episodeDetails.vote_average > 0 && (
+                          <span className="flex items-center gap-1.5 text-yellow-500">
+                            <Star size={14} className="fill-yellow-500" />
+                            {episodeDetails.vote_average.toFixed(1)} Rating
+                          </span>
+                       )}
+                       {episodeDetails.runtime > 0 && <span className="text-gray-400">Runtime: {episodeDetails.runtime}m</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap gap-4">
                   <span className="flex items-center gap-1.5 text-yellow-500 font-bold bg-yellow-500/10 px-3 py-1 rounded-lg"><Star size={16} className="fill-yellow-500" />{item.vote_average > 0 ? item.vote_average.toFixed(1) : 'N/A'}</span>
                   <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-lg"><Clock size={16} />{currentRuntime > 0 ? `${currentRuntime} minutes` : 'N/A'}</span>
@@ -312,7 +365,7 @@ function NetCorePlayer({ item, initialSeason = 1, initialEpisode = 1, onSelectIt
             </button>
             {showProviders && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-darker border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
-                {['vidlink', 'vidcore', 'vidsrc', 'multiembed', 'videasy', 'cinezo'].map(p => <button key={p} onClick={() => { setProvider(p); setShowProviders(false) }} className="w-full text-left px-4 py-3 hover:bg-white/5 text-white capitalize">{p}</button>)}
+                {['vidlink', 'vidapi', 'vidcore', 'vidsrc', 'multiembed', 'videasy', 'cinezo'].map(p => <button key={p} onClick={() => { setProvider(p); setShowProviders(false) }} className="w-full text-left px-4 py-3 hover:bg-white/5 text-white capitalize">{p}</button>)}
               </div>
             )}
           </div>
